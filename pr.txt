@@ -1,0 +1,21 @@
+DAFTAR PR (PEKERJAAN RUMAH) PENGEMBANGAN APLIKASI TOKO-WA
+
+1. Pindah dari Local Storage ke Database Asli (Prioritas Utama)
+   - Kondisi: Data produk, keranjang, dan QRIS saat ini disimpan di localStorage (bisa hilang jika clear cache).
+   - Target: Integrasi dengan Backend as a Service (BaaS) gratis seperti Firebase atau Supabase agar data aman di cloud.
+
+2. Solusi Upload Gambar Produk & QRIS
+   - Kondisi: Gambar QRIS di-convert ke Base64 (batas 5MB), produk pakai URL manual.
+   - Target: Tambahkan fitur upload gambar yang langsung tersambung ke Cloud Storage (ImgBB, Cloudinary, atau Firebase Storage).
+
+3. Download Struk sebagai Gambar (Screenshot)
+   - Kondisi: Struk saat ini hanya bisa di-Print (ke format PDF).
+   - Target: Tambahkan tombol "Download Struk" menggunakan library html2canvas agar pembeli bisa mengirim bukti struk (.png/.jpg) ke WA admin.
+
+4. Perbaiki Tampilan Notifikasi Error (UX)
+   - Kondisi: Validasi form masih menggunakan alert() bawaan browser yang kurang elegan.
+   - Target: Ganti alert() dengan notifikasi Toast modern (menggunakan library react-hot-toast atau react-toastify).
+
+5. Riwayat Pesanan di Halaman Admin
+   - Kondisi: Pesanan langsung dikirim ke WhatsApp tanpa rekap di web aplikasi.
+   - Target: Setelah database ada, buat halaman "Daftar Pesanan Masuk" di Admin lengkap dengan statusnya.
