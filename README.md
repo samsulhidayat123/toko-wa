@@ -35,18 +35,6 @@ Web toko online sederhana berbasis React + Vite untuk menampilkan katalog produk
 - `src/utils/adminAuth.js`: login admin berbasis baris setting di spreadsheet.
 - `src/utils/whatsapp.js`: nomor admin dan format struk WhatsApp.
 
-## Setup Environment
-
-Buat file `.env` di root project. Contoh sudah tersedia di `.env.example`.
-
-```env
-VITE_SPREADSHEET_API_URL=https://api.sheetbest.com/sheets/your-sheet-id
-VITE_IMGBB_API_KEY=your-imgbb-api-key
-
-VITE_ADMIN_USERNAME=admin
-VITE_ADMIN_PASSWORD=change-this-password
-```
-
 Keterangan:
 
 - `VITE_SPREADSHEET_API_URL`: URL API dari Sheet.best.
