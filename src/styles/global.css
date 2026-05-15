@@ -870,7 +870,7 @@ th {
 
 .mini-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
@@ -884,6 +884,12 @@ th {
 
 .wa-mini {
   background: #22c55e !important;
+}
+
+.share-mini {
+  background: white !important;
+  color: #e53935 !important;
+  border: 1px solid #ffd7d4 !important;
 }
 
 /* matikan style lama yang bikin tinggi */
