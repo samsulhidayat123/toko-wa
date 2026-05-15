@@ -8,6 +8,37 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const existingQty = Number(cart.find((item) => item.id === product.id)?.qty || 0);
   const isOutOfStock = stock <= 0;
   const isMaxQtySelected = existingQty >= stock;
+  const productAnchorId = `produk-${encodeURIComponent(
+    String(product.id || product.name || "item")
+  )}`;
+
+  function getProductShareText(productUrl) {
+    const lines = [
+      `Cek produk ini: ${product.name}`,
+      `Harga: ${formatRupiah(product.price)}`,
+      product.description ? `Detail: ${product.description}` : "",
+      productUrl,
+    ];
+
+    return lines.filter(Boolean).join("\n");
+  }
+
+  async function copyShareText(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
 
   function addToCart() {
     if (isOutOfStock) {
@@ -46,8 +77,30 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
     }
   }
 
+  async function shareProduct() {
+    const productUrl = `${window.location.origin}${window.location.pathname}#${productAnchorId}`;
+    const shareText = getProductShareText(productUrl);
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: product.name,
+          text: shareText,
+          url: productUrl,
+        });
+        return;
+      }
+
+      await copyShareText(shareText);
+      notify.success("Info produk berhasil disalin untuk dibagikan.");
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      notify.error("Gagal membagikan produk. Coba lagi nanti.");
+    }
+  }
+
   return (
-    <div className="product-card mini-card">
+    <div className="product-card mini-card" id={productAnchorId}>
       <div className="mini-img-box">
         <img
           src={product.image || DEFAULT_PRODUCT_IMAGE}
@@ -80,6 +133,9 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
           </button>
           <button className="wa-mini" onClick={handleBuyNow} disabled={isOutOfStock}>
             Beli
+          </button>
+          <button className="share-mini" onClick={shareProduct}>
+            Bagikan
           </button>
         </div>
       </div>
