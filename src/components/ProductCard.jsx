@@ -1,21 +1,6 @@
 import { formatRupiah } from "../utils/format";
-import { DEFAULT_PRODUCT_IMAGE } from "../utils/api";
+import { getDirectImgBbImageUrl } from "../utils/api";
 import { useNotification } from "../utils/notification";
-
-function getImgBbImageUrl(imageUrl) {
-  if (!imageUrl) return DEFAULT_PRODUCT_IMAGE;
-
-  try {
-    const url = new URL(imageUrl);
-    const host = url.hostname.toLowerCase();
-
-    return host === "i.ibb.co" || host.endsWith(".ibb.co") || host.endsWith(".imgbb.com")
-      ? imageUrl
-      : DEFAULT_PRODUCT_IMAGE;
-  } catch {
-    return DEFAULT_PRODUCT_IMAGE;
-  }
-}
 
 export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const { notify } = useNotification();
@@ -23,38 +8,10 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const existingQty = Number(cart.find((item) => item.id === product.id)?.qty || 0);
   const isOutOfStock = stock <= 0;
   const isMaxQtySelected = existingQty >= stock;
-  const productImageUrl = getImgBbImageUrl(product.image);
+  const productImageUrl = getDirectImgBbImageUrl(product.image);
   const productAnchorId = `produk-${encodeURIComponent(
     String(product.id || product.name || "item")
   )}`;
-
-  function getProductShareText(productUrl) {
-    const lines = [
-      `Cek produk ini: ${product.name}`,
-      `Harga: ${formatRupiah(product.price)}`,
-      product.description ? `Detail: ${product.description}` : "",
-      productUrl,
-    ];
-
-    return lines.filter(Boolean).join("\n");
-  }
-
-  async function copyShareText(text) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-  }
 
   function addToCart() {
     if (isOutOfStock) {
@@ -93,6 +50,34 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
     }
   }
 
+  function getProductShareText(productUrl) {
+    const lines = [
+      `Cek produk ini: ${product.name}`,
+      `Harga: ${formatRupiah(product.price)}`,
+      product.description ? `Detail: ${product.description}` : "",
+      productUrl,
+    ];
+
+    return lines.filter(Boolean).join("\n");
+  }
+
+  async function copyShareText(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+
   async function shareProduct() {
     const productUrl = `${window.location.origin}${window.location.pathname}#${productAnchorId}`;
     const shareText = getProductShareText(productUrl);
@@ -118,22 +103,22 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   return (
     <div className="product-card mini-card" id={productAnchorId}>
       <div className="mini-img-box">
-        <img
-          src={productImageUrl}
-          alt={product.name}
-          onError={(e) => {
-            e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
-          }}
-        />
+        {productImageUrl ? (
+          <img
+            src={productImageUrl}
+            alt={product.name}
+            onError={(event) => {
+              event.currentTarget.hidden = true;
+            }}
+          />
+        ) : null}
 
         <span className="mini-tag">{product.tag || product.category || "Ready"}</span>
       </div>
 
       <div className="mini-body">
         <div className="mini-category">{product.category}</div>
-
         <h3>{product.name}</h3>
-
         <p>{product.description}</p>
 
         <div className="mini-info">
