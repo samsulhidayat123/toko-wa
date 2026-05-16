@@ -34,6 +34,24 @@ export function getQrisImageFromRows(rows) {
   return rows.find(isQrisSettingsRow)?.image || "";
 }
 
+export function getDirectImgBbImageUrl(imageUrl) {
+  const rawImageUrl = String(imageUrl || "").trim();
+  if (!rawImageUrl) return "";
+
+  try {
+    const url = new URL(rawImageUrl);
+    const host = url.hostname.toLowerCase();
+    const isDirectImgBbHost =
+      host === "i.ibb.co" ||
+      host.endsWith(".i.ibb.co") ||
+      host.endsWith(".imgbb.com");
+
+    return isDirectImgBbHost ? rawImageUrl : "";
+  } catch {
+    return "";
+  }
+}
+
 export function normalizeProductRow(product) {
   return {
     ...product,
@@ -41,7 +59,7 @@ export function normalizeProductRow(product) {
     category: product.category || "",
     description: product.description || "",
     tag: product.tag || "Ready",
-    image: product.image || DEFAULT_PRODUCT_IMAGE,
+    image: getDirectImgBbImageUrl(product.image),
     price: Number(product.price),
     oldPrice: product.oldPrice ? Number(product.oldPrice) : "",
     stock: Number(product.stock),
@@ -167,7 +185,18 @@ export async function uploadImageToImgBB(file) {
     }
 
     const result = await response.json();
-    return result.data.url; // Mengembalikan URL gambar yang diunggah
+    const directImageUrl =
+      result.data?.display_url || result.data?.image?.url || result.data?.url || "";
+
+    if (!directImageUrl) {
+      throw new Error("ImgBB tidak mengembalikan URL gambar.");
+    }
+
+    if (!getDirectImgBbImageUrl(directImageUrl)) {
+      throw new Error("URL gambar ImgBB tidak valid untuk ditampilkan.");
+    }
+
+    return directImageUrl;
   } catch (error) {
     console.error("Error uploading image to ImgBB:", error);
     throw error;
