@@ -5,6 +5,7 @@ import { defaultProducts } from "../data/defaultProducts";
 import {
   DEFAULT_PRODUCT_IMAGE,
   SPREADSHEET_API_URL,
+  getDirectImgBbImageUrl,
   isAppSettingsRow,
   isSpreadsheetApiConfigured,
   saveQrisImageToSpreadsheet,
@@ -44,6 +45,42 @@ export default function AdminPage({
     (product.name || "").toLowerCase().includes(keyword.toLowerCase())
   );
 
+  function buildProductData(source) {
+    return {
+      ...source,
+      name: source.name || "",
+      category: source.category || "",
+      price: source.price === "" ? "" : Number(source.price),
+      oldPrice: source.oldPrice ? Number(source.oldPrice) : "",
+      stock: source.stock === "" ? "" : Number(source.stock),
+      tag: source.tag || "Ready",
+      description: source.description || "",
+      image: getDirectImgBbImageUrl(source.image),
+    };
+  }
+
+  async function saveProductImageToRow(productId, imageUrl) {
+    const selectedProduct = products.find((product) => product.id === productId);
+    if (!selectedProduct) return;
+
+    const updatedProduct = buildProductData({
+      ...selectedProduct,
+      image: imageUrl,
+    });
+
+    const response = await fetch(`${SPREADSHEET_API_URL}/id/${encodeURIComponent(productId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedProduct),
+    });
+
+    if (!response.ok) {
+      throw new Error("Gagal menyimpan gambar ke produk.");
+    }
+
+    await fetchProducts();
+  }
+
   function handleChange(e) {
     setForm({
       ...form,
@@ -63,8 +100,20 @@ export default function AdminPage({
     setIsUploadingProductImage(true);
     try {
       const imageUrl = await uploadImageToImgBB(file);
-      setForm((prevForm) => ({ ...prevForm, image: imageUrl }));
-      notify.success("Gambar produk berhasil diunggah.");
+      const directImageUrl = getDirectImgBbImageUrl(imageUrl);
+
+      if (!directImageUrl) {
+        throw new Error("URL gambar dari ImgBB tidak valid.");
+      }
+
+      setForm((prevForm) => ({ ...prevForm, image: directImageUrl }));
+
+      if (form.id && isSpreadsheetApiConfigured()) {
+        await saveProductImageToRow(form.id, directImageUrl);
+        notify.success("Gambar produk berhasil diunggah dan disimpan.");
+      } else {
+        notify.success("Gambar produk berhasil diunggah. Simpan produk agar gambar menempel.");
+      }
     } catch (err) {
       notify.error(`Gagal mengunggah gambar produk: ${err.message}`);
     } finally {
@@ -104,9 +153,19 @@ export default function AdminPage({
 
     setForm((prevForm) => ({
       ...prevForm,
-      image: DEFAULT_PRODUCT_IMAGE,
+      image: "",
     }));
-    notify.success("Gambar produk berhasil dihapus.");
+
+    if (form.id && isSpreadsheetApiConfigured()) {
+      try {
+        await saveProductImageToRow(form.id, "");
+        notify.success("Gambar produk berhasil dihapus.");
+      } catch (err) {
+        notify.error(err.message);
+      }
+    } else {
+      notify.success("Gambar produk berhasil dihapus.");
+    }
   }
 
   async function removeQris() {
@@ -142,14 +201,7 @@ export default function AdminPage({
       return;
     }
 
-    const productData = {
-      ...form,
-      price: Number(form.price),
-      oldPrice: form.oldPrice ? Number(form.oldPrice) : "",
-      stock: Number(form.stock),
-      tag: form.tag || "Ready",
-      image: form.image || DEFAULT_PRODUCT_IMAGE,
-    };
+    const productData = buildProductData(form);
 
     if (form.id) {
       // --- UPDATE ---
@@ -161,11 +213,7 @@ export default function AdminPage({
         });
         if (!response.ok) throw new Error("Gagal mengupdate produk di spreadsheet.");
 
-        setProducts(
-          products.map((product) =>
-            product.id === form.id ? productData : product
-          )
-        );
+        await fetchProducts();
         notify.success("Produk berhasil diedit.");
       } catch (err) {
         notify.error(err.message);
@@ -181,7 +229,7 @@ export default function AdminPage({
         });
         if (!response.ok) throw new Error("Gagal menambah produk ke spreadsheet.");
 
-        setProducts([newProduct, ...products]);
+        await fetchProducts();
         notify.success("Produk berhasil ditambahkan.");
       } catch (err) {
         notify.error(err.message);
