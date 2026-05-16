@@ -2,12 +2,28 @@ import { formatRupiah } from "../utils/format";
 import { DEFAULT_PRODUCT_IMAGE } from "../utils/api";
 import { useNotification } from "../utils/notification";
 
+function getImgBbImageUrl(imageUrl) {
+  if (!imageUrl) return DEFAULT_PRODUCT_IMAGE;
+
+  try {
+    const url = new URL(imageUrl);
+    const host = url.hostname.toLowerCase();
+
+    return host === "i.ibb.co" || host.endsWith(".ibb.co") || host.endsWith(".imgbb.com")
+      ? imageUrl
+      : DEFAULT_PRODUCT_IMAGE;
+  } catch {
+    return DEFAULT_PRODUCT_IMAGE;
+  }
+}
+
 export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const { notify } = useNotification();
   const stock = Number(product.stock || 0);
   const existingQty = Number(cart.find((item) => item.id === product.id)?.qty || 0);
   const isOutOfStock = stock <= 0;
   const isMaxQtySelected = existingQty >= stock;
+  const productImageUrl = getImgBbImageUrl(product.image);
   const productAnchorId = `produk-${encodeURIComponent(
     String(product.id || product.name || "item")
   )}`;
@@ -103,7 +119,7 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
     <div className="product-card mini-card" id={productAnchorId}>
       <div className="mini-img-box">
         <img
-          src={product.image || DEFAULT_PRODUCT_IMAGE}
+          src={productImageUrl}
           alt={product.name}
           onError={(e) => {
             e.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
