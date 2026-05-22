@@ -5,7 +5,6 @@ import {
 } from "./api";
 
 const DEFAULT_ADMIN_USERNAME = "admin";
-const DEFAULT_ADMIN_PASSWORD = "admin123";
 const ADMIN_SESSION_KEY = "admin_session";
 const ADMIN_SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
 
