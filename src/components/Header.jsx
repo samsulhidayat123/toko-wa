@@ -6,7 +6,7 @@ export default function Header({ page, setPage, isAdminLoggedIn, onLogout }) {
           Q
         </div>
         <div>
-          <span className="brand-title">Toko Qonita</span>
+          <span className="brand-title">Toserba Qonita</span>
           <small>Toko Serba Ada</small>
         </div>
       </div>

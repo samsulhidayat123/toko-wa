@@ -1,0 +1,13 @@
+{
+  "name": "toko-wa-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "devDependencies": {
+    "vercel": "^48.12.0"
+  }
+}

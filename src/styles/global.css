@@ -780,11 +780,13 @@ th {
 }
 
 .product-card.mini-card {
-  border-radius: 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  border-radius: 16px !important;
   overflow: hidden !important;
   box-shadow: 0 8px 20px rgba(31, 41, 55, 0.08) !important;
   min-height: unset !important;
-  height: auto !important;
 }
 
 .product-card.mini-card:hover {
@@ -793,14 +795,14 @@ th {
 
 .mini-img-box {
   position: relative;
-  height: 115px !important;
+  aspect-ratio: 4 / 3;
   background: #f3f4f6;
   overflow: hidden;
 }
 
 .mini-img-box img {
   width: 100% !important;
-  height: 115px !important;
+  height: 100% !important;
   object-fit: cover !important;
   display: block !important;
 }
@@ -818,6 +820,9 @@ th {
 }
 
 .mini-body {
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: column !important;
   padding: 11px !important;
 }
 
@@ -833,6 +838,11 @@ th {
   line-height: 1.2 !important;
   margin: 0 0 5px !important;
   color: #1f2937;
+  min-height: 36px;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
 }
 
 .mini-body p {
@@ -854,6 +864,7 @@ th {
   gap: 6px;
   font-size: 10.5px;
   color: #6b7280;
+  margin-top: auto;
   margin-bottom: 4px;
 }
 
@@ -870,7 +881,7 @@ th {
 
 .mini-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -880,10 +891,18 @@ th {
   border-radius: 11px !important;
   font-size: 11.5px !important;
   line-height: 1 !important;
+  min-height: 34px !important;
+  white-space: nowrap !important;
 }
 
 .wa-mini {
   background: #22c55e !important;
+}
+
+.share-mini {
+  background: white !important;
+  color: #e53935 !important;
+  border: 1px solid #ffd7d4 !important;
 }
 
 /* matikan style lama yang bikin tinggi */
@@ -909,7 +928,7 @@ th {
   .mini-img-box,
   .mini-img-box img,
   .product-card > img {
-    height: 100px !important;
+    height: auto !important;
   }
 
   .mini-body {
@@ -918,6 +937,7 @@ th {
 
   .mini-body h3 {
     font-size: 13.5px !important;
+    min-height: 33px;
   }
 
   .mini-body p {
@@ -925,7 +945,11 @@ th {
   }
 
   .mini-actions {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .share-mini {
+    grid-column: 1 / -1;
   }
 }
 

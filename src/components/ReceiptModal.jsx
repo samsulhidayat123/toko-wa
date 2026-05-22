@@ -17,7 +17,7 @@ export default function ReceiptModal({
   return (
     <div className="modal">
       <div className="receipt" style={{ maxHeight: "90vh", overflowY: "auto" }}>
-        <h2>Toko Qonita</h2>
+        <h2>Toserba Qonita</h2>
         <p>Struk Belanja</p>
         <p>{invoice}</p>
         <hr />

@@ -25,3 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Internal notes / catatan kerja (jangan masuk repo public)
+laporan.md
+pr.md
+todo.md
+*.draft.md

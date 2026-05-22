@@ -1,4 +1,4 @@
-# Toko Qonita - Web Olshop Checkout WhatsApp
+# Toserba Qonita - Web Olshop Checkout WhatsApp
 
 Web toko online sederhana berbasis React + Vite untuk menampilkan katalog produk, menerima data customer, membuat struk belanja, dan mengirim order ke WhatsApp. Admin dapat mengelola produk, stok, gambar produk, QRIS, dan data contoh melalui halaman admin.
 
