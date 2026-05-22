@@ -1,10 +1,23 @@
 import { formatRupiah } from "./format";
 
-// GANTI NOMOR DI BAWAH INI DENGAN NOMOR WA ADMIN (Nomormu)
-// Gunakan kode negara 62, tanpa tanda + atau angka 0 di depan (contoh: "6281299998888")
-export const WA_NUMBER = "6287717309901";
+// Nomor WA toko diambil dari environment variable.
+// Set VITE_WA_NUMBER di .env (lokal) dan di hosting (Vercel/Netlify env vars).
+// Format: kode negara 62, tanpa "+" atau "0" depan. Contoh: "6281234567890".
+const WA_NUMBER_FROM_ENV = import.meta.env.VITE_WA_NUMBER?.trim();
+
+export const WA_NUMBER = WA_NUMBER_FROM_ENV || "";
+
+export function isWaNumberConfigured() {
+  return /^[1-9]\d{7,14}$/.test(WA_NUMBER);
+}
 
 export function buildWhatsAppReceipt(cart, customer, paymentMethod = "tunai") {
+  if (!isWaNumberConfigured()) {
+    throw new Error(
+      "VITE_WA_NUMBER belum diatur dengan benar. Tambahkan di .env, contoh: VITE_WA_NUMBER=6281234567890"
+    );
+  }
+
   const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
   const invoice = "INV-" + Date.now();
