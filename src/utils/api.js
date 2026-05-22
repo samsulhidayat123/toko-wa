@@ -1,7 +1,6 @@
 // Ganti dengan URL koneksi dari sheet.best atau layanan serupa
 export const SPREADSHEET_API_URL =
-  import.meta.env.VITE_SPREADSHEET_API_URL?.trim() ||
-  "https://api.sheetbest.com/sheets/bef38b47-487f-41df-aefa-6eb5b663428c";
+  import.meta.env.VITE_SPREADSHEET_API_URL?.trim() || "";
 
 // Contoh: "https://sheet.best/api/sheets/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
@@ -163,7 +162,7 @@ export async function reduceStockInSpreadsheet(cart) {
 
 // Tambahkan API Key ImgBB Anda di sini, atau lewat VITE_IMGBB_API_KEY di file .env
 export const IMGBB_API_KEY =
-  import.meta.env.VITE_IMGBB_API_KEY?.trim() || "28a8ea4d3e860717c74eeb1cafa39240";
+  import.meta.env.VITE_IMGBB_API_KEY?.trim() || "";
 
 export async function uploadImageToImgBB(file) {
   if (!IMGBB_API_KEY) {
