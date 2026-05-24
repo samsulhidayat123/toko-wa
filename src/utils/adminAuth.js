@@ -39,6 +39,9 @@ function buildAdminSettingsRow(account) {
 }
 
 function getAccountFromRow(row) {
+  if (row?.name && row?.description) {
+    return { username: row.name, password: row.description };
+  }
   const fallback = getFallbackAdminAccount();
   return {
     username: row?.name || fallback.username,
