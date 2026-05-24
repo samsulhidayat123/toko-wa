@@ -1,5 +1,5 @@
 import { formatRupiah } from "../utils/format";
-import { getDirectImgBbImageUrl } from "../utils/api";
+import { getValidImageUrl, DEFAULT_PRODUCT_IMAGE } from "../utils/api";
 import { useNotification } from "../utils/notification";
 
 export default function ProductCard({ product, cart, setCart, onBuyNow }) {
@@ -8,7 +8,7 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const existingQty = Number(cart.find((item) => item.id === product.id)?.qty || 0);
   const isOutOfStock = stock <= 0;
   const isMaxQtySelected = existingQty >= stock;
-  const productImageUrl = getDirectImgBbImageUrl(product.image);
+  const productImageUrl = getValidImageUrl(product.image) || DEFAULT_PRODUCT_IMAGE;
   const productAnchorId = `produk-${encodeURIComponent(
     String(product.id || product.name || "item")
   )}`;
@@ -103,15 +103,15 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   return (
     <div className="product-card mini-card" id={productAnchorId}>
       <div className="mini-img-box">
-        {productImageUrl ? (
-          <img
-            src={productImageUrl}
-            alt={product.name}
-            onError={(event) => {
-              event.currentTarget.hidden = true;
-            }}
-          />
-        ) : null}
+        <img
+          src={productImageUrl}
+          alt={product.name}
+          onError={(event) => {
+            if (event.currentTarget.src !== DEFAULT_PRODUCT_IMAGE) {
+              event.currentTarget.src = DEFAULT_PRODUCT_IMAGE;
+            }
+          }}
+        />
 
         <span className="mini-tag">{product.tag || product.category || "Ready"}</span>
       </div>

@@ -6,6 +6,7 @@ import {
   DEFAULT_PRODUCT_IMAGE,
   SPREADSHEET_API_URL,
   getDirectImgBbImageUrl,
+  getValidImageUrl,
   isAppSettingsRow,
   isSpreadsheetApiConfigured,
   saveQrisImageToSpreadsheet,
@@ -55,7 +56,7 @@ export default function AdminPage({
       stock: source.stock === "" ? "" : Number(source.stock),
       tag: source.tag || "Ready",
       description: source.description || "",
-      image: getDirectImgBbImageUrl(source.image),
+      image: getValidImageUrl(source.image),
     };
   }
 

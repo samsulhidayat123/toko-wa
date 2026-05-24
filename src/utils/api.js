@@ -51,6 +51,19 @@ export function getDirectImgBbImageUrl(imageUrl) {
   }
 }
 
+export function getValidImageUrl(imageUrl) {
+  const rawImageUrl = String(imageUrl || "").trim();
+  if (!rawImageUrl) return "";
+
+  try {
+    const url = new URL(rawImageUrl);
+    const isHttp = url.protocol === "http:" || url.protocol === "https:";
+    return isHttp ? rawImageUrl : "";
+  } catch {
+    return "";
+  }
+}
+
 export function normalizeProductRow(product) {
   return {
     ...product,
@@ -58,7 +71,7 @@ export function normalizeProductRow(product) {
     category: product.category || "",
     description: product.description || "",
     tag: product.tag || "Ready",
-    image: getDirectImgBbImageUrl(product.image),
+    image: getValidImageUrl(product.image),
     price: Number(product.price),
     oldPrice: product.oldPrice ? Number(product.oldPrice) : "",
     stock: Number(product.stock),
