@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { saveAdminSession, verifyAdminLogin } from "../utils/adminAuth";
+import { useEffect, useState } from "react";
+import {
+  saveAdminSession,
+  verifyAdminLogin,
+  getLoginLockoutInfo,
+} from "../utils/adminAuth";
 
 export default function AdminLogin({ onLogin }) {
   const [form, setForm] = useState({
@@ -8,6 +12,20 @@ export default function AdminLogin({ onLogin }) {
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lockInfo, setLockInfo] = useState(() => getLoginLockoutInfo());
+
+  // Update countdown setiap detik saat user terkunci
+  useEffect(() => {
+    if (!lockInfo.isLocked) return;
+    const interval = setInterval(() => {
+      const newInfo = getLoginLockoutInfo();
+      setLockInfo(newInfo);
+      if (!newInfo.isLocked) {
+        setError("");
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockInfo.isLocked]);
 
   function handleChange(e) {
     setForm((currentForm) => ({
@@ -19,6 +37,8 @@ export default function AdminLogin({ onLogin }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (lockInfo.isLocked) return;
+
     setIsSubmitting(true);
     setError("");
 
@@ -31,13 +51,24 @@ export default function AdminLogin({ onLogin }) {
         return;
       }
 
-      setError("Username atau password salah.");
+      const newLockInfo = getLoginLockoutInfo();
+      setLockInfo(newLockInfo);
+      if (newLockInfo.isLocked) {
+        setError(
+          `Terlalu banyak percobaan gagal. Coba lagi dalam ${newLockInfo.remainingMinutes} menit.`
+        );
+      } else {
+        setError("Username atau password salah.");
+      }
     } catch (err) {
       setError(err.message);
+      setLockInfo(getLoginLockoutInfo());
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const isDisabled = isSubmitting || lockInfo.isLocked;
 
   return (
     <main>
@@ -58,7 +89,8 @@ export default function AdminLogin({ onLogin }) {
               value={form.username}
               onChange={handleChange}
               autoComplete="username"
-              disabled={isSubmitting}
+              disabled={isDisabled}
+              maxLength={100}
               required
             />
 
@@ -70,14 +102,25 @@ export default function AdminLogin({ onLogin }) {
               value={form.password}
               onChange={handleChange}
               autoComplete="current-password"
-              disabled={isSubmitting}
+              disabled={isDisabled}
+              maxLength={200}
               required
             />
 
             {error ? <div className="login-error">{error}</div> : null}
 
-            <button type="submit" className="login-btn" disabled={isSubmitting}>
-              {isSubmitting ? "Memeriksa..." : "Masuk Admin"}
+            {lockInfo.isLocked ? (
+              <div className="login-error">
+                Login terkunci. Tunggu {lockInfo.remainingSeconds} detik lagi.
+              </div>
+            ) : null}
+
+            <button type="submit" className="login-btn" disabled={isDisabled}>
+              {isSubmitting
+                ? "Memeriksa..."
+                : lockInfo.isLocked
+                ? "Login Terkunci"
+                : "Masuk Admin"}
             </button>
           </form>
         </div>
