@@ -228,7 +228,7 @@ async function ensureSchema(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
-      short_code TEXT UNIQUE,
+      short_code TEXT,
       name TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL DEFAULT 0,
@@ -262,10 +262,18 @@ async function ensureSchema(sql) {
 
   try {
     await sql`
-      ALTER TABLE products ADD COLUMN short_code TEXT UNIQUE
+      ALTER TABLE products ADD COLUMN short_code TEXT
     `;
   } catch {
     // Column already exists
+  }
+
+  try {
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_products_short_code ON products(short_code)
+    `;
+  } catch {
+    // Index already exists
   }
 }
 
@@ -281,9 +289,16 @@ async function listRows(sql) {
     ORDER BY created_at ASC, name ASC
   `;
 
+  const products = await Promise.all(
+    productRows.map(async (row) => {
+      const product = productFromDb(row);
+      return ensureProductHasShortCode(sql, product);
+    })
+  );
+
   return [
     ...settingsRows.map((row) => row.data),
-    ...productRows.map(productFromDb),
+    ...products,
   ];
 }
 
@@ -304,7 +319,9 @@ async function getRowById(sql, id) {
     WHERE id = ${id}
     LIMIT 1
   `;
-  return rows[0] ? productFromDb(rows[0]) : null;
+  if (!rows[0]) return null;
+  const product = productFromDb(rows[0]);
+  return ensureProductHasShortCode(sql, product);
 }
 
 async function getProductByShortCode(sql, short_code) {
@@ -315,6 +332,31 @@ async function getProductByShortCode(sql, short_code) {
     LIMIT 1
   `;
   return rows[0] ? productFromDb(rows[0]) : null;
+}
+
+async function ensureProductHasShortCode(sql, product) {
+  if (!product.short_code || product.short_code.trim() === "") {
+    let newShortCode = generateShortCode();
+    let retries = 5;
+    // Retry if collision
+    while (retries > 0) {
+      try {
+        await sql`
+          UPDATE products
+          SET short_code = ${newShortCode}, updated_at = NOW()
+          WHERE id = ${product.id} AND (short_code IS NULL OR short_code = '')
+        `;
+        return { ...product, short_code: newShortCode };
+      } catch (e) {
+        // Collision, retry with new code
+        newShortCode = generateShortCode();
+        retries--;
+      }
+    }
+    // If all retries failed, just return with generated code (not saved)
+    return { ...product, short_code: newShortCode };
+  }
+  return product;
 }
 
 async function upsertSetting(sql, id, row) {
@@ -414,8 +456,17 @@ async function handleRequest(request, env) {
   const indexMatch = path.match(/^\/(\d+)$/);
 
   if (request.method === "GET" && pMatch) {
-    const product = await getProductByShortCode(sql, pMatch[1]);
+    const identifier = pMatch[1];
+    // Try short_code first (if looks like short code)
+    let product = null;
+    if (identifier.length <= 10 && /^[a-z0-9]+$/.test(identifier)) {
+      product = await getProductByShortCode(sql, identifier);
+    }
+    // Fall back to ID if short code didn't work or wasn't a short code
     if (!product) {
+      product = await getRowById(sql, decodeURIComponent(identifier));
+    }
+    if (!product || isSettingsRow(product)) {
       return htmlResponse("<!doctype html><title>Produk tidak ditemukan</title><h1>Produk tidak ditemukan</h1>", 404);
     }
     return htmlResponse(productSharePage(product, request, env));
