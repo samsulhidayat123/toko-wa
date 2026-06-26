@@ -23,6 +23,7 @@ const emptyForm = {
   tag: "",
   description: "",
   image: "",
+  rating: "",
 };
 
 export default function AdminPage({
@@ -47,6 +48,7 @@ export default function AdminPage({
   );
 
   function buildProductData(source) {
+    const rating = source.rating === "" ? "" : Number(source.rating);
     return {
       ...source,
       name: source.name || "",
@@ -57,6 +59,7 @@ export default function AdminPage({
       tag: source.tag || "Ready",
       description: source.description || "",
       image: getValidImageUrl(source.image),
+      rating: rating === "" ? 0 : Math.max(0, Math.min(5, rating)),
     };
   }
 
@@ -252,6 +255,7 @@ export default function AdminPage({
       tag: product.tag || "",
       description: product.description || "",
       image: product.image || "",
+      rating: product.rating || "",
       // productImageFile tidak diisi karena ini hanya untuk upload baru
     });
 
@@ -472,6 +476,18 @@ export default function AdminPage({
               name="tag"
               placeholder="Contoh: Promo, New, Best Seller"
               value={form.tag}
+              onChange={handleChange}
+            />
+
+            <label>Rating (0-5)</label>
+            <input
+              name="rating"
+              type="number"
+              min="0"
+              max="5"
+              step="0.5"
+              placeholder="Contoh: 4.5"
+              value={form.rating}
               onChange={handleChange}
             />
 

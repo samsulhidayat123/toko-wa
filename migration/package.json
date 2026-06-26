@@ -1,0 +1,12 @@
+{
+  "name": "toko-wa-database-migration",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "migrate:neon": "node migrate-sheetbest-to-neon.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  }
+}

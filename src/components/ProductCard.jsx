@@ -1,6 +1,19 @@
 import { formatRupiah } from "../utils/format";
-import { getValidImageUrl, DEFAULT_PRODUCT_IMAGE } from "../utils/api";
+import { getProductShareUrl, getValidImageUrl, DEFAULT_PRODUCT_IMAGE } from "../utils/api";
 import { useNotification } from "../utils/notification";
+
+function renderRatingStars(rating) {
+  if (!rating || rating <= 0) return <span className="rating-text">⭐ Terpercaya</span>;
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating % 1 !== 0;
+  return (
+    <span className="rating-stars">
+      {"⭐".repeat(fullStars)}
+      {hasHalf && "✨"}
+      <span className="rating-text">({rating}/5)</span>
+    </span>
+  );
+}
 
 export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   const { notify } = useNotification();
@@ -79,7 +92,7 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
   }
 
   async function shareProduct() {
-    const productUrl = `${window.location.origin}${window.location.pathname}#${productAnchorId}`;
+    const productUrl = getProductShareUrl(product, productAnchorId);
     const shareText = getProductShareText(productUrl);
 
     try {
@@ -118,6 +131,9 @@ export default function ProductCard({ product, cart, setCart, onBuyNow }) {
 
       <div className="mini-body">
         <div className="mini-category">{product.category}</div>
+        {product.rating > 0 && (
+          <div className="mini-rating">{renderRatingStars(product.rating)}</div>
+        )}
         <h3>{product.name}</h3>
         <p>{product.description}</p>
 

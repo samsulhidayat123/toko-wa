@@ -833,6 +833,28 @@ th {
   margin-bottom: 4px;
 }
 
+.mini-rating {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-rating .rating-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-rating .rating-text {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
 .mini-body h3 {
   font-size: 15px !important;
   line-height: 1.2 !important;

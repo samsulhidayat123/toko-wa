@@ -1,0 +1,7 @@
+name = "toko-wa-api"
+main = "src/index.js"
+compatibility_date = "2026-05-31"
+
+[vars]
+ALLOWED_ORIGIN = "https://toserbaqonita.my.id"
+SITE_URL = "https://toserbaqonita.my.id"

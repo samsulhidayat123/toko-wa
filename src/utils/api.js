@@ -70,6 +70,7 @@ export function normalizeProductRow(product) {
     price: Number(product.price),
     oldPrice: product.oldPrice ? Number(product.oldPrice) : "",
     stock: Number(product.stock),
+    rating: Math.max(0, Math.min(5, Number(product.rating) || 0)),
   };
 }
 
