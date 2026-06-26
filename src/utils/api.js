@@ -78,10 +78,9 @@ export function getProductShareUrl(product, productAnchorId) {
   const fallbackUrl = `${window.location.origin}${window.location.pathname}#${productAnchorId}`;
 
   try {
-    const apiUrl = new URL(SPREADSHEET_API_URL);
-    // Use short_code for shorter, cleaner URLs
+    // Use custom domain untuk share URL - lebih professional
     const shortCode = product.short_code || product.id;
-    return `${apiUrl.origin}/p/${encodeURIComponent(shortCode)}`;
+    return `https://share.toserbaqonita.my.id/p/${encodeURIComponent(shortCode)}`;
   } catch {
     return fallbackUrl;
   }
