@@ -79,9 +79,9 @@ export function getProductShareUrl(product, productAnchorId) {
 
   try {
     const apiUrl = new URL(SPREADSHEET_API_URL);
-    return `${apiUrl.origin}/share/${encodeURIComponent(
-      String(product.id || product.name || "item")
-    )}`;
+    // Use short_code for shorter, cleaner URLs
+    const shortCode = product.short_code || product.id;
+    return `${apiUrl.origin}/p/${encodeURIComponent(shortCode)}`;
   } catch {
     return fallbackUrl;
   }

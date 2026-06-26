@@ -64,6 +64,15 @@ function createId() {
   return crypto.randomUUID();
 }
 
+function generateShortCode() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < 7; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 function isSettingsRow(row) {
   return SETTINGS_IDS.has(row?.id);
 }
@@ -71,6 +80,7 @@ function isSettingsRow(row) {
 function rowToProduct(row) {
   return {
     id: String(row.id || createId()),
+    short_code: String(row.short_code || generateShortCode()),
     name: String(row.name || ""),
     category: String(row.category || ""),
     price: numberOrZero(row.price),
@@ -86,6 +96,7 @@ function rowToProduct(row) {
 function productFromDb(row) {
   return {
     id: row.id,
+    short_code: row.short_code || generateShortCode(),
     name: row.name || "",
     category: row.category || "",
     price: Number(row.price || 0),
@@ -217,6 +228,7 @@ async function ensureSchema(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
+      short_code TEXT UNIQUE,
       name TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL DEFAULT 0,
@@ -245,7 +257,15 @@ async function ensureSchema(sql) {
       ALTER TABLE products ADD COLUMN rating NUMERIC DEFAULT 0
     `;
   } catch {
-    // Column already exists, no action needed
+    // Column already exists
+  }
+
+  try {
+    await sql`
+      ALTER TABLE products ADD COLUMN short_code TEXT UNIQUE
+    `;
+  } catch {
+    // Column already exists
   }
 }
 
@@ -287,6 +307,16 @@ async function getRowById(sql, id) {
   return rows[0] ? productFromDb(rows[0]) : null;
 }
 
+async function getProductByShortCode(sql, short_code) {
+  const rows = await sql`
+    SELECT *
+    FROM products
+    WHERE short_code = ${short_code}
+    LIMIT 1
+  `;
+  return rows[0] ? productFromDb(rows[0]) : null;
+}
+
 async function upsertSetting(sql, id, row) {
   const data = {
     ...row,
@@ -306,14 +336,15 @@ async function upsertProduct(sql, row) {
   const product = rowToProduct(row);
   await sql`
     INSERT INTO products (
-      id, name, category, price, old_price, stock, tag, description, image, rating
+      id, short_code, name, category, price, old_price, stock, tag, description, image, rating
     )
     VALUES (
-      ${product.id}, ${product.name}, ${product.category}, ${product.price},
+      ${product.id}, ${product.short_code}, ${product.name}, ${product.category}, ${product.price},
       ${product.oldPrice}, ${product.stock}, ${product.tag},
       ${product.description}, ${product.image}, ${product.rating}
     )
     ON CONFLICT (id) DO UPDATE SET
+      short_code = COALESCE(EXCLUDED.short_code, products.short_code),
       name = EXCLUDED.name,
       category = EXCLUDED.category,
       price = EXCLUDED.price,
@@ -379,7 +410,16 @@ async function handleRequest(request, env) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   const idMatch = path.match(/^\/id\/(.+)$/);
   const shareMatch = path.match(/^\/share\/(.+)$/);
+  const pMatch = path.match(/^\/p\/(.+)$/);
   const indexMatch = path.match(/^\/(\d+)$/);
+
+  if (request.method === "GET" && pMatch) {
+    const product = await getProductByShortCode(sql, pMatch[1]);
+    if (!product) {
+      return htmlResponse("<!doctype html><title>Produk tidak ditemukan</title><h1>Produk tidak ditemukan</h1>", 404);
+    }
+    return htmlResponse(productSharePage(product, request, env));
+  }
 
   if (request.method === "GET" && shareMatch) {
     const product = await getRowById(sql, decodeURIComponent(shareMatch[1]));
