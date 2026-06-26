@@ -212,7 +212,7 @@ export default function AdminPage({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(productData),
         });
-        if (!response.ok) throw new Error("Gagal mengupdate produk di spreadsheet.");
+        if (!response.ok) throw new Error("Gagal mengupdate produk di database.");
 
         await fetchProducts();
         notify.success("Produk berhasil diedit.");
@@ -226,9 +226,9 @@ export default function AdminPage({
         const response = await fetch(SPREADSHEET_API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([newProduct]), // Kirim sebagai array untuk sheet.best
+          body: JSON.stringify([newProduct]),
         });
-        if (!response.ok) throw new Error("Gagal menambah produk ke spreadsheet.");
+        if (!response.ok) throw new Error("Gagal menambah produk ke database.");
 
         await fetchProducts();
         notify.success("Produk berhasil ditambahkan.");
@@ -280,7 +280,7 @@ export default function AdminPage({
       const response = await fetch(`${SPREADSHEET_API_URL}/id/${id}`, {
         method: "DELETE",
       });
-      if (!response.ok) throw new Error("Gagal menghapus produk dari spreadsheet.");
+      if (!response.ok) throw new Error("Gagal menghapus produk dari database.");
 
       setProducts(products.filter((product) => product.id !== id));
       setCart((cart) => cart.filter((item) => item.id !== id));
@@ -314,7 +314,7 @@ export default function AdminPage({
     setIsResettingProducts(true);
     try {
       const response = await fetch(SPREADSHEET_API_URL);
-      if (!response.ok) throw new Error("Gagal mengambil data produk dari spreadsheet.");
+      if (!response.ok) throw new Error("Gagal mengambil data produk dari database.");
 
       const currentProducts = await response.json();
       const productRows = currentProducts
@@ -328,7 +328,7 @@ export default function AdminPage({
         });
 
         if (!deleteResponse.ok) {
-          throw new Error("Gagal menghapus produk lama dari spreadsheet.");
+          throw new Error("Gagal menghapus produk lama dari database.");
         }
       }
 
@@ -339,7 +339,7 @@ export default function AdminPage({
       });
 
       if (!createResponse.ok) {
-        throw new Error("Gagal mengisi ulang produk contoh ke spreadsheet.");
+        throw new Error("Gagal mengisi ulang produk contoh ke database.");
       }
 
       setProducts(sampleProducts);

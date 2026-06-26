@@ -1,14 +1,9 @@
-// Ganti dengan URL koneksi dari sheet.best atau layanan serupa
+// Cloudflare Worker API URL untuk akses database Neon
 export const SPREADSHEET_API_URL =
   import.meta.env.VITE_SPREADSHEET_API_URL?.trim() || "";
 
-// Contoh: "https://sheet.best/api/sheets/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
 export function isSpreadsheetApiConfigured() {
-  return (
-    SPREADSHEET_API_URL.startsWith("http") &&
-    !SPREADSHEET_API_URL.includes("xxxxxxxx")
-  );
+  return SPREADSHEET_API_URL.startsWith("http");
 }
 
 export const DEFAULT_PRODUCT_IMAGE =
@@ -78,6 +73,19 @@ export function normalizeProductRow(product) {
   };
 }
 
+export function getProductShareUrl(product, productAnchorId) {
+  const fallbackUrl = `${window.location.origin}${window.location.pathname}#${productAnchorId}`;
+
+  try {
+    const apiUrl = new URL(SPREADSHEET_API_URL);
+    return `${apiUrl.origin}/share/${encodeURIComponent(
+      String(product.id || product.name || "item")
+    )}`;
+  } catch {
+    return fallbackUrl;
+  }
+}
+
 function buildQrisSettingsRow(imageUrl) {
   return {
     id: QRIS_SETTINGS_ID,
@@ -115,7 +123,7 @@ export async function saveQrisImageToSpreadsheet(imageUrl) {
   );
 
   if (!response.ok) {
-    throw new Error("Gagal menyimpan QRIS ke spreadsheet.");
+    throw new Error("Gagal menyimpan QRIS ke database.");
   }
 
   return imageUrl;
@@ -126,7 +134,7 @@ export async function reduceStockInSpreadsheet(cart) {
 
   const response = await fetch(SPREADSHEET_API_URL);
   if (!response.ok) {
-    throw new Error("Gagal mengambil stok terbaru dari spreadsheet.");
+    throw new Error("Gagal mengambil stok terbaru dari database.");
   }
 
   const rows = await response.json();
@@ -136,7 +144,7 @@ export async function reduceStockInSpreadsheet(cart) {
   const updates = cart.map((item) => {
     const currentProduct = updatedProducts.find((product) => product.id === item.id);
     if (!currentProduct) {
-      throw new Error(`Produk "${item.name}" tidak ditemukan di spreadsheet.`);
+      throw new Error(`Produk "${item.name}" tidak ditemukan di database.`);
     }
 
     const requestedQty = Number(item.qty || 0);

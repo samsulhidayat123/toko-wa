@@ -20,7 +20,7 @@ Web toko online sederhana berbasis React + Vite untuk menampilkan katalog produk
 
 - React 19
 - Vite
-- Sheet.best / Spreadsheet API sebagai database produk dan setting aplikasi
+- Cloudflare Worker + Neon PostgreSQL sebagai backend API dan database
 - ImgBB sebagai hosting gambar produk dan QRIS
 - WhatsApp `wa.me` sebagai tujuan checkout
 
@@ -31,59 +31,30 @@ Web toko online sederhana berbasis React + Vite untuk menampilkan katalog produk
 - `src/components/AdminLogin.jsx`: form login admin.
 - `src/components/CartBox.jsx`: keranjang, pembayaran, checkout.
 - `src/components/ReceiptModal.jsx`: preview/cetak struk.
-- `src/utils/api.js`: konfigurasi Spreadsheet API, ImgBB, QRIS, stok.
-- `src/utils/adminAuth.js`: login admin berbasis baris setting di spreadsheet.
+- `src/utils/api.js`: konfigurasi Cloudflare Worker API, ImgBB, QRIS, stok.
+- `src/utils/adminAuth.js`: login admin berbasis baris setting di database.
 - `src/utils/whatsapp.js`: nomor admin dan format struk WhatsApp.
 
 Keterangan:
 
-- `VITE_SPREADSHEET_API_URL`: URL API dari Sheet.best.
+- `VITE_SPREADSHEET_API_URL`: URL endpoint Cloudflare Worker API.
 - `VITE_IMGBB_API_KEY`: API key ImgBB untuk upload gambar produk dan QRIS.
-- `VITE_ADMIN_USERNAME`: fallback username untuk membuat akun admin pertama kali di spreadsheet.
-- `VITE_ADMIN_PASSWORD`: fallback password untuk membuat akun admin pertama kali di spreadsheet.
+- `VITE_ADMIN_USERNAME`: fallback username untuk membuat akun admin pertama kali di database.
+- `VITE_ADMIN_PASSWORD`: fallback password untuk membuat akun admin pertama kali di database.
 
-## Setup Spreadsheet
+## Setup Database
 
-Buat Google Sheet lalu isi baris pertama dengan header berikut:
+Gunakan Neon PostgreSQL untuk backend database.
 
-```text
-id, name, category, price, oldPrice, stock, tag, description, image
-```
+1. Buat project baru di [Neon](https://neon.tech)
+2. Copy connection string dari dashboard Neon
+3. Deploy Cloudflare Worker dengan secret `DATABASE_URL`
+4. Migrasi data dari Sheet.best ke Neon (lihat `migration/README.md`)
+5. Set `VITE_SPREADSHEET_API_URL` ke URL Cloudflare Worker di GitHub Secrets
 
-Hubungkan sheet tersebut ke Sheet.best, lalu salin URL API ke `VITE_SPREADSHEET_API_URL`.
-
-Baris produk memakai kolom:
-
-- `id`: ID unik produk.
-- `name`: nama produk.
-- `category`: kategori produk.
-- `price`: harga jual.
-- `oldPrice`: harga coret, boleh kosong.
-- `stock`: stok produk.
-- `tag`: label produk, misalnya Promo atau Ready.
-- `description`: deskripsi produk.
-- `image`: URL gambar produk.
-
-## Baris Setting Otomatis
-
-Aplikasi membuat baris khusus di spreadsheet untuk setting global. Baris ini disembunyikan dari daftar produk dan tidak ikut dihapus saat reset produk contoh.
-
-```text
-__app_qris_settings__
-```
-
-Dipakai untuk menyimpan URL QRIS hasil upload ImgBB. URL QRIS tersimpan di kolom `image`.
-
-```text
-__app_admin_account__
-```
-
-Dipakai untuk menyimpan akun admin:
-
-- Kolom `name`: username admin.
-- Kolom `description`: password admin.
-
-Jika baris admin belum ada, aplikasi akan membuatnya saat login pertama memakai nilai fallback dari `.env`.
+Untuk detail, lihat:
+- `worker/README.md` - Setup dan deploy Cloudflare Worker
+- `migration/README.md` - Migrasi data dari Sheet.best ke Neon
 
 ## Alur Customer
 
@@ -92,7 +63,7 @@ Jika baris admin belum ada, aplikasi akan membuatnya saat login pertama memakai 
 3. Jumlah item di keranjang tidak bisa melebihi stok.
 4. Customer mengisi nama, nomor HP, dan alamat.
 5. Customer memilih metode pembayaran.
-6. Saat klik `Kirim Struk ke WhatsApp`, aplikasi mengurangi stok di spreadsheet.
+6. Saat klik `Kirim Struk ke WhatsApp`, aplikasi mengurangi stok di database Neon.
 7. Setelah stok berhasil dikurangi, WhatsApp terbuka dengan struk otomatis.
 8. Cart dikosongkan setelah checkout berhasil.
 
