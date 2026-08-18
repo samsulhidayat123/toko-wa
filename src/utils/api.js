@@ -11,6 +11,19 @@ export const DEFAULT_PRODUCT_IMAGE =
 
 export const QRIS_SETTINGS_ID = "__app_qris_settings__";
 export const ADMIN_SETTINGS_ID = "__app_admin_account__";
+export const ADMIN_API_TOKEN_KEY = "admin_api_token";
+
+export function getAdminToken() {
+  return localStorage.getItem(ADMIN_API_TOKEN_KEY) || "";
+}
+
+export function authHeaders({ withJson = false } = {}) {
+  const headers = {};
+  const token = getAdminToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (withJson) headers["Content-Type"] = "application/json";
+  return headers;
+}
 
 export function isQrisSettingsRow(row) {
   return row?.id === QRIS_SETTINGS_ID;
@@ -117,7 +130,7 @@ export async function saveQrisImageToSpreadsheet(imageUrl) {
     rowExists ? `${SPREADSHEET_API_URL}/id/${QRIS_SETTINGS_ID}` : SPREADSHEET_API_URL,
     {
       method: rowExists ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ withJson: true }),
       body: JSON.stringify(rowExists ? qrisData : [qrisData]),
     }
   );
@@ -132,53 +145,21 @@ export async function saveQrisImageToSpreadsheet(imageUrl) {
 export async function reduceStockInSpreadsheet(cart) {
   if (!isSpreadsheetApiConfigured()) return null;
 
-  const response = await fetch(SPREADSHEET_API_URL);
+  const response = await fetch(`${SPREADSHEET_API_URL}/checkout`, {
+    method: "POST",
+    headers: authHeaders({ withJson: true }),
+    body: JSON.stringify({
+      items: cart.map((item) => ({ id: item.id, qty: item.qty })),
+    }),
+  });
+
   if (!response.ok) {
-    throw new Error("Gagal mengambil stok terbaru dari database.");
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "Gagal mengurangi stok.");
   }
 
-  const rows = await response.json();
-  const productRows = rows.filter((row) => !isAppSettingsRow(row));
-  const updatedProducts = productRows.map(normalizeProductRow);
-
-  const updates = cart.map((item) => {
-    const currentProduct = updatedProducts.find((product) => product.id === item.id);
-    if (!currentProduct) {
-      throw new Error(`Produk "${item.name}" tidak ditemukan di database.`);
-    }
-
-    const requestedQty = Number(item.qty || 0);
-    const currentStock = Number(currentProduct.stock || 0);
-
-    if (requestedQty > currentStock) {
-      throw new Error(`Stok "${currentProduct.name}" tinggal ${currentStock}.`);
-    }
-
-    return {
-      ...currentProduct,
-      stock: currentStock - requestedQty,
-    };
-  });
-
-  for (const updatedProduct of updates) {
-    const updateResponse = await fetch(
-      `${SPREADSHEET_API_URL}/id/${encodeURIComponent(updatedProduct.id)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedProduct),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      throw new Error(`Gagal mengurangi stok "${updatedProduct.name}".`);
-    }
-  }
-
-  return updatedProducts.map((product) => {
-    const updatedProduct = updates.find((item) => item.id === product.id);
-    return updatedProduct || product;
-  });
+  const data = await response.json();
+  return data.products || null;
 }
 
 // Tambahkan API Key ImgBB Anda di sini, atau lewat VITE_IMGBB_API_KEY di file .env

@@ -4,6 +4,36 @@ const QRIS_SETTINGS_ID = "__app_qris_settings__";
 const ADMIN_SETTINGS_ID = "__app_admin_account__";
 const SETTINGS_IDS = new Set([QRIS_SETTINGS_ID, ADMIN_SETTINGS_ID]);
 
+const SESSION_DURATION_SECONDS = 12 * 60 * 60; // 12 jam
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 5 * 60 * 1000; // 5 menit
+
+// Rate limiting login per-IP (best-effort, in-memory per isolate)
+const loginAttempts = new Map();
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(String(text || ""))
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// Constant-time comparison untuk mencegah timing attack
+function safeCompare(a, b) {
+  const strA = String(a || "");
+  const strB = String(b || "");
+  if (strA.length !== strB.length) return false;
+
+  let mismatch = 0;
+  for (let i = 0; i < strA.length; i++) {
+    mismatch |= strA.charCodeAt(i) ^ strB.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 function jsonResponse(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -275,6 +305,13 @@ async function ensureSchema(sql) {
   } catch {
     // Index already exists
   }
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `;
 }
 
 async function listRows(sql) {
@@ -347,7 +384,7 @@ async function ensureProductHasShortCode(sql, product) {
           WHERE id = ${product.id} AND (short_code IS NULL OR short_code = '')
         `;
         return { ...product, short_code: newShortCode };
-      } catch (e) {
+      } catch {
         // Collision, retry with new code
         newShortCode = generateShortCode();
         retries--;
@@ -432,6 +469,144 @@ async function parseJson(request) {
   }
 }
 
+function extractToken(request) {
+  const authorization = request.headers.get("authorization") || "";
+  if (authorization.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length).trim();
+  }
+  return (request.headers.get("x-auth-token") || "").trim();
+}
+
+async function getSession(sql, token) {
+  if (!token) return null;
+  const rows = await sql`
+    SELECT token
+    FROM sessions
+    WHERE token = ${token} AND expires_at > NOW()
+    LIMIT 1
+  `;
+  return rows[0]?.token || null;
+}
+
+async function handleLogin(request, sql, env, corsHeaders) {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const now = Date.now();
+  const currentAttempt = loginAttempts.get(ip);
+
+  if (currentAttempt && currentAttempt.lockedUntil > now) {
+    const remaining = Math.ceil((currentAttempt.lockedUntil - now) / 60000);
+    return jsonResponse(
+      { message: `Terlalu banyak percobaan gagal. Coba lagi dalam ${remaining} menit.` },
+      429,
+      corsHeaders
+    );
+  }
+
+  const body = await parseJson(request);
+  const username = String(body?.username || "").trim();
+  const password = String(body?.password || "");
+
+  if (!username || !password) {
+    return jsonResponse({ message: "Username dan password wajib diisi." }, 400, corsHeaders);
+  }
+
+  let adminRow = await getRowById(sql, ADMIN_SETTINGS_ID);
+
+  if (!adminRow) {
+    // Akun admin belum ada di database → buat dari secret Worker
+    const envUser = String(env.ADMIN_USERNAME || "").trim() || "admin";
+    const envPass = String(env.ADMIN_PASSWORD || "").trim();
+    if (!envPass) {
+      return jsonResponse(
+        { message: "Belum ada akun admin. Atur secret ADMIN_PASSWORD di Cloudflare Worker." },
+        500,
+        corsHeaders
+      );
+    }
+    const hashed = `sha256$${await sha256Hex(envPass)}`;
+    adminRow = { name: envUser, description: hashed };
+    await upsertSetting(sql, ADMIN_SETTINGS_ID, { name: envUser, description: hashed });
+  }
+
+  let isMatch = false;
+
+  if (safeCompare(username, adminRow.name || "")) {
+    const stored = String(adminRow.description || "");
+    if (stored.startsWith("sha256$")) {
+      isMatch = safeCompare(await sha256Hex(password), stored.slice("sha256$".length));
+    } else {
+      // Legacy: password plaintext di database → migrasi ke hash
+      isMatch = safeCompare(password, stored);
+      if (isMatch) {
+        const hashed = `sha256$${await sha256Hex(password)}`;
+        await upsertSetting(sql, ADMIN_SETTINGS_ID, { ...adminRow, description: hashed });
+      }
+    }
+  }
+
+  if (!isMatch) {
+    const previous = loginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+    const count = previous.count + 1;
+    loginAttempts.set(
+      ip,
+      count >= MAX_LOGIN_ATTEMPTS
+        ? { count, lockedUntil: now + LOGIN_LOCK_MS }
+        : { count, lockedUntil: 0 }
+    );
+    return jsonResponse({ message: "Username atau password salah." }, 401, corsHeaders);
+  }
+
+  loginAttempts.delete(ip);
+
+  const token = crypto.randomUUID();
+  await sql`
+    INSERT INTO sessions (token, expires_at)
+    VALUES (${token}, NOW() + make_interval(secs => ${SESSION_DURATION_SECONDS}))
+  `;
+
+  return jsonResponse(
+    {
+      token,
+      expiresAt: Date.now() + SESSION_DURATION_SECONDS * 1000,
+    },
+    200,
+    corsHeaders
+  );
+}
+
+async function handleCheckout(sql, cart) {
+  const items = Array.isArray(cart) ? cart : [];
+  const updates = [];
+
+  for (const item of items) {
+    const id = String(item?.id || "");
+    const qty = Math.max(0, Math.trunc(Number(item?.qty || 0)));
+    if (!id || qty <= 0) continue;
+
+    const rows = await sql`
+      UPDATE products
+      SET stock = stock - ${qty}, updated_at = NOW()
+      WHERE id = ${id} AND stock >= ${qty}
+      RETURNING *
+    `;
+
+    if (!rows[0]) {
+      const existing = await getRowById(sql, id);
+      if (!existing || isSettingsRow(existing)) {
+        return { error: "Produk tidak ditemukan.", status: 404 };
+      }
+      return {
+        error: `Stok "${existing.name}" tinggal ${Number(existing.stock || 0)}.`,
+        status: 409,
+      };
+    }
+
+    updates.push(productFromDb(rows[0]));
+  }
+
+  return { products: updates };
+}
+
 async function handleRequest(request, env) {
   const cors = getCorsHeaders(request, env);
   if (request.method === "OPTIONS") {
@@ -483,6 +658,37 @@ async function handleRequest(request, env) {
 
   if (request.method === "GET" && path === "/") {
     return jsonResponse(await listRows(sql), 200, cors.headers);
+  }
+
+  if (request.method === "POST" && path === "/login") {
+    return handleLogin(request, sql, env, cors.headers);
+  }
+
+  if (request.method === "POST" && path === "/checkout") {
+    const body = await parseJson(request);
+    const result = await handleCheckout(sql, body?.items);
+
+    if (result.error) {
+      return jsonResponse({ message: result.error }, result.status, cors.headers);
+    }
+
+    return jsonResponse(
+      { message: "Stok berhasil dikurangi.", products: result.products },
+      200,
+      cors.headers
+    );
+  }
+
+  // Semua endpoint tulis (POST/PUT/DELETE) wajib autentikasi admin
+  if (request.method !== "GET") {
+    const sessionToken = await getSession(sql, extractToken(request));
+    if (!sessionToken) {
+      return jsonResponse(
+        { message: "Tidak diizinkan. Login admin diperlukan." },
+        401,
+        cors.headers
+      );
+    }
   }
 
   if (request.method === "GET" && idMatch) {

@@ -27,9 +27,13 @@ Set Database secret:
 
 ```bash
 npx wrangler secret put DATABASE_URL
+npx wrangler secret put ADMIN_USERNAME
+npx wrangler secret put ADMIN_PASSWORD
 ```
 
-Paste connection string Neon saat diminta.
+Paste connection string Neon saat diminta. `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+dipakai membuat akun admin pertama (dihash di server). Kunci ini Wajib karena
+endpoint tulis menolak request tanpa token login.
 
 Deploy:
 

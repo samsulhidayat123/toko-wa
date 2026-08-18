@@ -1,4 +1,5 @@
 import {
+  ADMIN_API_TOKEN_KEY,
   ADMIN_SETTINGS_ID,
   SPREADSHEET_API_URL,
   isSpreadsheetApiConfigured,
@@ -155,15 +156,35 @@ function recordFailedAttempt() {
 
 // ========== Login ==========
 
-export async function verifyAdminLogin(username, password) {
-  // Cek rate limit dulu
-  const lockInfo = getLoginLockoutInfo();
-  if (lockInfo.isLocked) {
-    throw new Error(
-      `Terlalu banyak percobaan gagal. Coba lagi dalam ${lockInfo.remainingMinutes} menit.`
-    );
+// Login lewat server Worker (endpoint /login).
+// Mengembalikan { token, expiresAt } jika sukses, { fallback: true } jika
+// worker lama belum punya endpoint /login, atau { failed } jika gagal.
+async function serverLogin(username, password) {
+  const response = await fetch(`${SPREADSHEET_API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (response.status === 404) {
+    return { fallback: true };
   }
 
+  if (response.status === 401 || response.status === 403 || response.status === 429) {
+    return { failed: true, message: null };
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    return { failed: true, message: data.message || "Gagal login ke server." };
+  }
+
+  const data = await response.json();
+  return { token: data.token || "", expiresAt: data.expiresAt || 0 };
+}
+
+// Fallback: verifikasi di sisi browser (worker lama tanpa endpoint /login).
+async function verifyAdminLoginLocal(username, password) {
   let adminRow = await fetchAdminRow();
   let adminAccount;
 
@@ -175,7 +196,6 @@ export async function verifyAdminLogin(username, password) {
   } else {
     // Belum ada row admin → buat dari fallback (sudah di-hash)
     adminAccount = await createAdminRowFromFallback();
-    adminRow = { name: adminAccount.username, description: adminAccount.password };
   }
 
   const inputUsername = String(username || "").trim();
@@ -186,7 +206,7 @@ export async function verifyAdminLogin(username, password) {
     return false;
   }
 
-  let isPasswordMatch = false;
+  let isPasswordMatch;
 
   if (isHashedPassword(adminAccount.password)) {
     // Password tersimpan dalam bentuk hash
@@ -208,6 +228,40 @@ export async function verifyAdminLogin(username, password) {
 
   clearLoginAttempts();
   return true;
+}
+
+export async function verifyAdminLogin(username, password) {
+  // Cek rate limit dulu
+  const lockInfo = getLoginLockoutInfo();
+  if (lockInfo.isLocked) {
+    throw new Error(
+      `Terlalu banyak percobaan gagal. Coba lagi dalam ${lockInfo.remainingMinutes} menit.`
+    );
+  }
+
+  if (isSpreadsheetApiConfigured()) {
+    const result = await serverLogin(username, password);
+
+    // Worker lama tanpa /login → verifikasi lokal
+    if (result.fallback) {
+      return verifyAdminLoginLocal(username, password);
+    }
+
+    if (result.token) {
+      localStorage.setItem(ADMIN_API_TOKEN_KEY, result.token);
+      clearLoginAttempts();
+      return true;
+    }
+
+    if (result.message) {
+      throw new Error(result.message);
+    }
+
+    recordFailedAttempt();
+    return false;
+  }
+
+  return verifyAdminLoginLocal(username, password);
 }
 
 // ========== Session ==========
@@ -235,5 +289,6 @@ export function isAdminSessionValid() {
 
 export function clearAdminSession() {
   localStorage.removeItem(ADMIN_SESSION_KEY);
+  localStorage.removeItem(ADMIN_API_TOKEN_KEY);
   localStorage.removeItem("admin_logged_in");
 }

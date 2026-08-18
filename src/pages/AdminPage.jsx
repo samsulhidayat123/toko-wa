@@ -5,6 +5,7 @@ import { defaultProducts } from "../data/defaultProducts";
 import {
   DEFAULT_PRODUCT_IMAGE,
   SPREADSHEET_API_URL,
+  authHeaders,
   getDirectImgBbImageUrl,
   getValidImageUrl,
   isAppSettingsRow,
@@ -74,7 +75,7 @@ export default function AdminPage({
 
     const response = await fetch(`${SPREADSHEET_API_URL}/id/${encodeURIComponent(productId)}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ withJson: true }),
       body: JSON.stringify(updatedProduct),
     });
 
@@ -212,7 +213,7 @@ export default function AdminPage({
       try {
         const response = await fetch(`${SPREADSHEET_API_URL}/id/${form.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders({ withJson: true }),
           body: JSON.stringify(productData),
         });
         if (!response.ok) throw new Error("Gagal mengupdate produk di database.");
@@ -228,7 +229,7 @@ export default function AdminPage({
       try {
         const response = await fetch(SPREADSHEET_API_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders({ withJson: true }),
           body: JSON.stringify([newProduct]),
         });
         if (!response.ok) throw new Error("Gagal menambah produk ke database.");
@@ -283,6 +284,7 @@ export default function AdminPage({
     try {
       const response = await fetch(`${SPREADSHEET_API_URL}/id/${id}`, {
         method: "DELETE",
+        headers: authHeaders(),
       });
       if (!response.ok) throw new Error("Gagal menghapus produk dari database.");
 
@@ -329,6 +331,7 @@ export default function AdminPage({
         const index = productRows[row].index;
         const deleteResponse = await fetch(`${SPREADSHEET_API_URL}/${index}`, {
           method: "DELETE",
+          headers: authHeaders(),
         });
 
         if (!deleteResponse.ok) {
@@ -338,7 +341,7 @@ export default function AdminPage({
 
       const createResponse = await fetch(SPREADSHEET_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ withJson: true }),
         body: JSON.stringify(sampleProducts),
       });
 

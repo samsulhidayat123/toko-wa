@@ -71,7 +71,14 @@ export default function CustomerPage({
       const updatedProducts = await reduceStockInSpreadsheet(cart);
 
       if (updatedProducts) {
-        setProducts(updatedProducts);
+        setProducts((current) =>
+          current.map((product) => {
+            const updatedProduct = updatedProducts.find(
+              (item) => item.id === product.id
+            );
+            return updatedProduct || product;
+          })
+        );
       } else {
         setProducts(
           products.map((product) => {
