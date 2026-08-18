@@ -603,6 +603,20 @@ button.danger {
   font-size: 13px;
 }
 
+.cleanter-status {
+  margin: 10px 4px 0;
+  font-size: 12px;
+  text-align: center;
+}
+
+.cleanter-status.ok {
+  color: #0a7a3d;
+}
+
+.cleanter-status.warn {
+  color: #b45309;
+}
+
 .receipt-settings-panel h2 {
   margin-bottom: 4px;
 }

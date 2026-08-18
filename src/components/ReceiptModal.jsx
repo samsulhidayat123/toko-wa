@@ -1,6 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatRupiah } from "../utils/format";
+import {
+  buildCleanterReceiptContent,
+  isCleanterAvailable,
+  printViaCleanter,
+} from "../utils/cleanter";
 
 export default function ReceiptModal({
   show,
@@ -12,6 +17,14 @@ export default function ReceiptModal({
   qrisImage,
   receiptSettings,
 }) {
+  const [cleanterState, setCleanterState] = useState({
+    status: "idle", // idle | checking | available | unavailable
+    printer: null,
+  });
+  const [printState, setPrintState] = useState({
+    status: "idle", // idle | printing | ok | error
+    message: "",
+  });
   // Terapkan ukuran kertas struk saat mencetak via @page di print CSS
   const paperSize = receiptSettings?.paperSize === "58" ? "58" : "80";
   const compact = Boolean(receiptSettings?.compact);
@@ -28,6 +41,41 @@ export default function ReceiptModal({
       document.head.removeChild(style);
     };
   }, [show, paperSize]);
+
+  useEffect(() => {
+    if (!show) return undefined;
+
+    let cancelled = false;
+    isCleanterAvailable().then(({ available, printer }) => {
+      if (cancelled) return;
+      setCleanterState({ status: available ? "available" : "unavailable", printer });
+      setPrintState({ status: "idle", message: "" });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show]);
+
+  async function handleBluetoothPrint() {
+    setPrintState({ status: "printing", message: "" });
+    try {
+      await printViaCleanter({
+        content: buildCleanterReceiptContent({
+          cart,
+          customer,
+          invoice,
+          paymentMethod,
+          qrisImage,
+        }),
+        paperWidth: Number(paperSize),
+        reference: invoice,
+      });
+      setPrintState({ status: "ok", message: "Struk terkirim ke printer Bluetooth." });
+    } catch (err) {
+      setPrintState({ status: "error", message: err.message });
+    }
+  }
 
   if (!show) return null;
 
@@ -78,11 +126,38 @@ export default function ReceiptModal({
         ) : null}
 
         <div className="modal-actions">
-          <button onClick={() => window.print()}>Print</button>
+          <button
+            onClick={handleBluetoothPrint}
+            disabled={printState.status === "printing" || cleanterState.status === "checking"}
+          >
+            {cleanterState.status === "checking"
+              ? "Cek printer..."
+              : printState.status === "printing"
+              ? "Mencetak..."
+              : "Cetak Bluetooth (HP)"}
+          </button>
+          <button className="secondary" onClick={() => window.print()}>
+            Print Kertas
+          </button>
           <button className="secondary" onClick={() => setShow(false)}>
             Tutup
           </button>
         </div>
+        {printState.status === "error" && (
+          <p className="cleanter-status warn">{printState.message}</p>
+        )}
+
+        {cleanterState.status === "available" && cleanterState.printer?.connected && (
+          <p className="cleanter-status ok">Printer: {cleanterState.printer.name}</p>
+        )}
+        {cleanterState.status === "available" && !cleanterState.printer?.connected && (
+          <p className="cleanter-status warn">
+            Printer belum terhubung. Buka aplikasi Cleanter dan pilih printer kamu.
+          </p>
+        )}
+        {printState.status === "ok" && (
+          <p className="cleanter-status ok">{printState.message}</p>
+        )}
       </div>
     </div>,
     document.body
