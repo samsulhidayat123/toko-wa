@@ -8,7 +8,9 @@ import { getStorage, setStorage } from "./utils/storage"; // Tetap dipakai untuk
 import { clearAdminSession, isAdminSessionValid } from "./utils/adminAuth";
 import {
   SPREADSHEET_API_URL,
+  DEFAULT_RECEIPT_SETTINGS,
   getQrisImageFromRows,
+  getReceiptSettings,
   isAppSettingsRow,
   isSpreadsheetApiConfigured,
   normalizeProductRow,
@@ -31,11 +33,13 @@ export default function App() {
   const [qrisImage, setQrisImage] = useState(() =>
     getStorage("qris_image", "")
   );
+  const [receiptSettings, setReceiptSettings] = useState(null);
 
   // Fungsi untuk mengambil data produk dari Spreadsheet API
   async function fetchProducts() {
     if (!isSpreadsheetApiConfigured()) {
       setProducts(defaultProducts);
+      setReceiptSettings({ ...DEFAULT_RECEIPT_SETTINGS });
       setIsLoading(false);
       return;
     }
@@ -47,6 +51,7 @@ export default function App() {
       if (!response.ok) throw new Error("Gagal mengambil data produk.");
       const data = await response.json();
       setQrisImage(getQrisImageFromRows(data));
+      setReceiptSettings(getReceiptSettings(data));
 
       const productRows = data.filter((product) => !isAppSettingsRow(product));
       const formatted = productRows.map(normalizeProductRow);
@@ -99,6 +104,7 @@ export default function App() {
           cart={cart}
           setCart={setCart}
           qrisImage={qrisImage}
+          receiptSettings={receiptSettings}
           isLoading={isLoading}
           error={error}
         />
@@ -115,6 +121,7 @@ export default function App() {
           setCart={setCart}
           qrisImage={qrisImage}
           setQrisImage={setQrisImage}
+          receiptSettings={receiptSettings}
           fetchProducts={fetchProducts}
           isLoading={isLoading}
           error={error}

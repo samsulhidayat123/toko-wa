@@ -2,7 +2,8 @@ import { neon } from "@neondatabase/serverless";
 
 const QRIS_SETTINGS_ID = "__app_qris_settings__";
 const ADMIN_SETTINGS_ID = "__app_admin_account__";
-const SETTINGS_IDS = new Set([QRIS_SETTINGS_ID, ADMIN_SETTINGS_ID]);
+const RECEIPT_SETTINGS_ID = "__app_receipt_settings__";
+const SETTINGS_IDS = new Set([QRIS_SETTINGS_ID, ADMIN_SETTINGS_ID, RECEIPT_SETTINGS_ID]);
 
 const SESSION_DURATION_SECONDS = 12 * 60 * 60; // 12 jam
 const MAX_LOGIN_ATTEMPTS = 5;

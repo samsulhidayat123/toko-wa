@@ -11,6 +11,7 @@ export const DEFAULT_PRODUCT_IMAGE =
 
 export const QRIS_SETTINGS_ID = "__app_qris_settings__";
 export const ADMIN_SETTINGS_ID = "__app_admin_account__";
+export const RECEIPT_SETTINGS_ID = "__app_receipt_settings__";
 export const ADMIN_API_TOKEN_KEY = "admin_api_token";
 
 export function getAdminToken() {
@@ -33,12 +34,68 @@ export function isAdminSettingsRow(row) {
   return row?.id === ADMIN_SETTINGS_ID;
 }
 
+export function isReceiptSettingsRow(row) {
+  return row?.id === RECEIPT_SETTINGS_ID;
+}
+
 export function isAppSettingsRow(row) {
-  return isQrisSettingsRow(row) || isAdminSettingsRow(row);
+  return isQrisSettingsRow(row) || isAdminSettingsRow(row) || isReceiptSettingsRow(row);
 }
 
 export function getQrisImageFromRows(rows) {
   return rows.find(isQrisSettingsRow)?.image || "";
+}
+
+export const DEFAULT_RECEIPT_SETTINGS = {
+  paperSize: "80",
+  compact: false,
+};
+
+export function getReceiptSettings(rows) {
+  const row = rows.find(isReceiptSettingsRow);
+  const paperSize = row?.paperSize === "58" ? "58" : "80";
+  return {
+    paperSize,
+    compact: Boolean(row?.compact),
+  };
+}
+
+function buildReceiptSettingsRow(settings) {
+  return {
+    id: RECEIPT_SETTINGS_ID,
+    name: "Pengaturan Struk",
+    category: "__settings__",
+    price: "",
+    oldPrice: "",
+    stock: "",
+    tag: "system",
+    description: "Ukuran kertas struk",
+    image: "",
+    paperSize: settings.paperSize === "58" ? "58" : "80",
+    compact: Boolean(settings.compact),
+  };
+}
+
+export async function saveReceiptSettingsToSpreadsheet(settings) {
+  if (!isSpreadsheetApiConfigured()) {
+    return settings;
+  }
+
+  const receiptData = buildReceiptSettingsRow(settings);
+  const response = await fetch(
+    `${SPREADSHEET_API_URL}/id/${RECEIPT_SETTINGS_ID}`,
+    {
+      method: "PUT",
+      headers: authHeaders({ withJson: true }),
+      body: JSON.stringify(receiptData),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Gagal menyimpan pengaturan struk.");
+  }
+
+  return settings;
 }
 
 export function getDirectImgBbImageUrl(imageUrl) {

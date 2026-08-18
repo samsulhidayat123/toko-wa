@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { formatRupiah } from "../utils/format";
 
 export default function ReceiptModal({
@@ -8,15 +9,36 @@ export default function ReceiptModal({
   invoice,
   paymentMethod,
   qrisImage,
+  receiptSettings,
 }) {
+  // Terapkan ukuran kertas struk saat mencetak via @page di print CSS
+  const paperSize = receiptSettings?.paperSize === "58" ? "58" : "80";
+  const compact = Boolean(receiptSettings?.compact);
+
+  useEffect(() => {
+    if (!show) return undefined;
+
+    const style = document.createElement("style");
+    style.setAttribute("data-receipt-page", "1");
+    style.textContent = `@media print { @page { size: ${paperSize}mm auto; margin: 0; } }`;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [show, paperSize]);
+
   if (!show) return null;
 
   const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const paymentLabel = paymentMethod === "qris" ? "QRIS" : "Tunai / COD";
+  const receiptClass = ["receipt", `paper-${paperSize}`, compact ? "compact" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="modal">
-      <div className="receipt" style={{ maxHeight: "90vh", overflowY: "auto" }}>
+      <div className={receiptClass} style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <h2>Toserba Qonita</h2>
         <p>Struk Belanja</p>
         <p>{invoice}</p>

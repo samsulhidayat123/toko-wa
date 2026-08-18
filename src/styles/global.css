@@ -577,6 +577,95 @@ button.danger {
   font-size: 18px;
 }
 
+.receipt.paper-58 {
+  width: 58mm;
+  padding: 12px;
+}
+
+.receipt.paper-80 {
+  width: 80mm;
+  padding: 16px;
+}
+
+.receipt.compact {
+  font-size: 10px;
+}
+
+.receipt.compact .receipt-row {
+  padding: 6px 0;
+}
+
+.receipt.compact hr {
+  margin: 8px 0;
+}
+
+.receipt.compact .receipt-row.total {
+  font-size: 13px;
+}
+
+.receipt-settings-panel h2 {
+  margin-bottom: 4px;
+}
+
+.receipt-size-options {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.receipt-size-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin: 0;
+}
+
+.receipt-size-options label.active {
+  border-color: var(--primary);
+  background: var(--soft-red);
+}
+
+.receipt-size-options input {
+  width: auto;
+  margin: 0;
+}
+
+.receipt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-top: 6px;
+}
+
+.receipt-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+@media print {
+  .receipt.paper-58 {
+    padding: 0;
+  }
+
+  .receipt.paper-80 {
+    padding: 0;
+  }
+
+  .receipt.compact {
+    font-size: 9px;
+  }
+}
+
 .modal-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -686,8 +775,24 @@ th {
 }
 
 @media print {
+  @page {
+    size: auto;
+    margin: 0;
+  }
+
+  body {
+    position: relative;
+  }
+
   body * {
     visibility: hidden;
+  }
+
+  .modal {
+    position: static;
+    display: block;
+    padding: 0;
+    background: none;
   }
 
   .receipt,
@@ -701,6 +806,7 @@ th {
     top: 0;
     width: 100%;
     box-shadow: none;
+    border-radius: 0;
     max-height: none !important;
     overflow: visible !important;
   }

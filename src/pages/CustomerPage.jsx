@@ -13,6 +13,7 @@ export default function CustomerPage({
   cart,
   setCart,
   qrisImage,
+  receiptSettings,
   isLoading,
   error,
 }) {
@@ -237,6 +238,7 @@ export default function CustomerPage({
         invoice={receiptInvoice}
         paymentMethod={paymentMethod}
         qrisImage={qrisImage}
+        receiptSettings={receiptSettings}
       />
     </main>
   );

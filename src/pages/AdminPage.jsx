@@ -4,6 +4,7 @@ import { useNotification } from "../utils/notification";
 import { defaultProducts } from "../data/defaultProducts";
 import {
   DEFAULT_PRODUCT_IMAGE,
+  DEFAULT_RECEIPT_SETTINGS,
   SPREADSHEET_API_URL,
   authHeaders,
   getDirectImgBbImageUrl,
@@ -11,6 +12,7 @@ import {
   isAppSettingsRow,
   isSpreadsheetApiConfigured,
   saveQrisImageToSpreadsheet,
+  saveReceiptSettingsToSpreadsheet,
   uploadImageToImgBB,
 } from "../utils/api";
 
@@ -33,6 +35,7 @@ export default function AdminPage({
   setCart,
   qrisImage,
   setQrisImage,
+  receiptSettings,
   fetchProducts,
   isLoading,
   error,
@@ -43,6 +46,11 @@ export default function AdminPage({
   const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
   const [isUploadingQrisImage, setIsUploadingQrisImage] = useState(false);
   const [isResettingProducts, setIsResettingProducts] = useState(false);
+  const [isSavingReceiptSettings, setIsSavingReceiptSettings] = useState(false);
+  const [receiptForm, setReceiptForm] = useState(() => ({
+    paperSize: receiptSettings?.paperSize || DEFAULT_RECEIPT_SETTINGS.paperSize,
+    compact: receiptSettings?.compact ?? DEFAULT_RECEIPT_SETTINGS.compact,
+  }));
 
   const filteredProducts = products.filter((product) =>
     (product.name || "").toLowerCase().includes(keyword.toLowerCase())
@@ -361,6 +369,26 @@ export default function AdminPage({
     }
   }
 
+  async function saveReceiptSettings(e) {
+    e.preventDefault();
+
+    if (!isSpreadsheetApiConfigured()) {
+      notify.warning("Fitur ini memerlukan koneksi ke Spreadsheet API.");
+      return;
+    }
+
+    setIsSavingReceiptSettings(true);
+    try {
+      await saveReceiptSettingsToSpreadsheet(receiptForm);
+      await fetchProducts();
+      notify.success("Pengaturan struk berhasil disimpan.");
+    } catch (err) {
+      notify.error(`Gagal menyimpan pengaturan struk: ${err.message}`);
+    } finally {
+      setIsSavingReceiptSettings(false);
+    }
+  }
+
   return (
     <main>
       <section>
@@ -425,6 +453,58 @@ export default function AdminPage({
               <span>Belum ada QRIS</span>
             )}
           </div>
+        </div>
+
+        <div className="panel receipt-settings-panel">
+          <h2>Pengaturan Struk</h2>
+          <p>Atur ukuran kertas struk yang dipakai saat cetak / keluar ke printer struk.</p>
+
+          <form onSubmit={saveReceiptSettings}>
+            <label>Ukuran Kertas</label>
+            <div className="receipt-size-options">
+              <label className={receiptForm.paperSize === "58" ? "active" : ""}>
+                <input
+                  type="radio"
+                  name="paperSize"
+                  value="58"
+                  checked={receiptForm.paperSize === "58"}
+                  onChange={(e) =>
+                    setReceiptForm({ ...receiptForm, paperSize: e.target.value })
+                  }
+                />
+                58mm (printer struk kecil)
+              </label>
+              <label className={receiptForm.paperSize === "80" ? "active" : ""}>
+                <input
+                  type="radio"
+                  name="paperSize"
+                  value="80"
+                  checked={receiptForm.paperSize === "80"}
+                  onChange={(e) =>
+                    setReceiptForm({ ...receiptForm, paperSize: e.target.value })
+                  }
+                />
+                80mm (printer struk standar)
+              </label>
+            </div>
+
+            <label className="receipt-toggle">
+              <input
+                type="checkbox"
+                checked={receiptForm.compact}
+                onChange={(e) =>
+                  setReceiptForm({ ...receiptForm, compact: e.target.checked })
+                }
+              />
+              Mode ringkas (ukuran teks lebih kecil agar hemat kertas)
+            </label>
+
+            <div className="form-actions">
+              <button type="submit" disabled={isSavingReceiptSettings}>
+                {isSavingReceiptSettings ? "Menyimpan..." : "Simpan Pengaturan Struk"}
+              </button>
+            </div>
+          </form>
         </div>
 
         <div className="admin-grid">
