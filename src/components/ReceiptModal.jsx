@@ -20,7 +20,7 @@ export default function ReceiptModal({
 
     const style = document.createElement("style");
     style.setAttribute("data-receipt-page", "1");
-    style.textContent = `@media print { @page { size: ${paperSize}mm auto; margin: 0; } }`;
+    style.textContent = `@media print { @page { size: ${paperSize}mm 297mm; margin: 0; } }`;
     document.head.appendChild(style);
 
     return () => {
