@@ -59,7 +59,7 @@ function getCorsHeaders(request, env) {
       ? {
           "access-control-allow-origin": origin || "*",
           "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "access-control-allow-headers": "content-type",
+          "access-control-allow-headers": "content-type, authorization, x-auth-token",
           "access-control-max-age": "86400",
           vary: "Origin",
         }

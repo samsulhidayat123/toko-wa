@@ -780,12 +780,14 @@ th {
     margin: 0;
   }
 
-  body {
-    position: relative;
+  #root {
+    display: none !important;
   }
 
-  body * {
-    visibility: hidden;
+  body {
+    position: relative;
+    margin: 0;
+    background: #fff;
   }
 
   .modal {

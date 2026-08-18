@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { formatRupiah } from "../utils/format";
 
 export default function ReceiptModal({
@@ -36,7 +37,7 @@ export default function ReceiptModal({
     .filter(Boolean)
     .join(" ");
 
-  return (
+  return createPortal(
     <div className="modal">
       <div className={receiptClass} style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <h2>Toserba Qonita</h2>
@@ -83,6 +84,7 @@ export default function ReceiptModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
